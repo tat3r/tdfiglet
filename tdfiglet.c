@@ -278,7 +278,7 @@ readchar(int i, glyph_t *glyph, font_t *font)
 	}
 
 	for (int i = 0; i < width * font->height; i++) {
-		glyph->cell[i].utfchar[0] = 'X';
+		glyph->cell[i].utfchar[0] = ' ';
 		glyph->cell[i].color = 0;
 	}
 
