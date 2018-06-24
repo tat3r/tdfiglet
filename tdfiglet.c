@@ -419,11 +419,19 @@ printrow(const glyph_t *glyph, int row)
 	char *utfchar;
 	uint8_t color;
 	int i;
+	uint8_t lastcolor;
 
 	for (i = 0; i < glyph->width; i++) {
 		utfchar = glyph->cell[glyph->width * row + i].utfchar;			
 		color = glyph->cell[glyph->width * row + i].color;
-		printcolor(color);
+
+		if (i == 0) {
+			printcolor(color);
+			lastcolor = color;
+		} else if (color != lastcolor) {
+			printcolor(color);
+			lastcolor = color;
+		}
 
 		printf("%s", utfchar);
 	}
@@ -487,7 +495,7 @@ printstr(const char *str, font_t *font)
 		if (opt.color == COLOR_ANSI) {
 			printf("\x1b[0m\n");
 		} else {
-			printf("\r\n");
+			printf("\x03\r\n");
 		}
 	}
 }
