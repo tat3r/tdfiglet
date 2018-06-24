@@ -331,22 +331,20 @@ readchar(int i, glyph_t *glyph, font_t *font)
 		glyph->cell[i].color = 0;
 	}
 
-	/* unsure why tbqh */
-	p += 2;
-
 	while (*p) {
 
 		ch = *p;
 		p++;
 
-		color = *p;
-		p++;
 
 		if (ch == '\r') {
+			ch = ' ';
 			row++;
 			col = 0;
-			p++;
+			color = 0;
 		} else {
+			color = *p;
+			p++;
 #ifdef DEBUG
 			if (ch == 0x09)
 				ch = 'T';
@@ -480,7 +478,12 @@ printstr(const char *str, font_t *font)
 			} else {
 				printf("\x03");
 			}
+
+			for (int s = 0; s < font->spacing; s++) {
+				printf(" ");
+			}
 		}
+
 		if (opt.color == COLOR_ANSI) {
 			printf("\x1b[0m\n");
 		} else {
