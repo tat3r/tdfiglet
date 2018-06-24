@@ -34,9 +34,17 @@
 
 #define DEFAULT_WIDTH	80
 
+#define COLOR_ANSI	0
+#define COLOR_MIRC	1
+
+#define ENC_UNICODE	0
+#define ENC_ANSI	1
+
 typedef struct opt_s {
 	uint8_t justify;
 	uint8_t width;
+	uint8_t color;
+	uint8_t encoding;
 } opt_t;
 
 typedef struct cell_s {
@@ -66,9 +74,12 @@ char *magic = "\x13TheDraw FONTS file\x1a";
 
 char *charlist = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNO"
 		 "PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-
-uint8_t fgcolors[] = {30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97};
-uint8_t bgcolors[] = {40, 44, 42, 46, 41, 45, 43, 47};
+/* thedraw colors                                     DRK BRT BRT BRT RED         BRT */
+/* thedraw colors     BLK BLU GRN CYN RED MAG BRN GRY GRY BLU GRN CYN RED PNK YLW WHT */
+uint8_t fgacolors[] = {30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97};
+uint8_t bgacolors[] = {40, 44, 42, 46, 41, 45, 43, 47};
+uint8_t fgmcolors[] = { 1,  2,  3, 10,  5,  6,  7, 15, 14,  12, 9, 11,  4, 13,  8,  0};
+uint8_t bgmcolors[] = { 1,  2,  3, 10,  5,  6,  7, 15, 14,  12, 9, 11,  4, 13,  8,  0};
 
 void usage(void);
 font_t *loadfont(char *fn);
@@ -88,7 +99,10 @@ usage(void)
 	fprintf(stderr, "usage: tdfiglet [options] [font.tdf] input\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "    -j l|r|c  Justify left, right, or center.  Default is left\n");
-	fprintf(stderr, "    -w n      set screen width, default is 80.\n");
+	fprintf(stderr, "    -w n      set screen width.  Default is 80.\n");
+	fprintf(stderr, "    -c a|m    color format ANSI or mirc.  Default is ANSI\n");
+	fprintf(stderr, "    -e u|a    encode as unicode or ASCII.  Default is unicode\n");
+	fprintf(stderr, "\n");
 	exit(EX_USAGE);
 
 	printf("welp\n");
@@ -107,7 +121,7 @@ main(int argc, char *argv[])
 	opt.justify = LEFT_JUSTIFY;
 	opt.width = 80;
 
-	while((o = getopt(argc, argv, "w:j:")) != -1) {
+	while((o = getopt(argc, argv, "w:j:c:e:")) != -1) {
 		switch (o) {
 			case 'w':
 				opt.width = atoi(optarg);
@@ -128,6 +142,33 @@ main(int argc, char *argv[])
 						exit(EX_USAGE);
 				}
 				break;
+			case 'c':
+				switch (optarg[0]) {
+					case 'a':
+						opt.color = COLOR_ANSI;
+						break;
+					case 'm':
+						opt.color = COLOR_MIRC;
+						break;
+					default:
+						usage();
+						exit(EX_USAGE);
+				}
+				break;
+			case 'e':
+				switch (optarg[0]) {
+					case 'a':
+						opt.encoding = ENC_ANSI;
+						break;
+					case 'u':
+						opt.encoding = ENC_UNICODE;
+						break;
+					default:
+						usage();
+						exit(EX_USAGE);
+				}
+				break;
+
 			default:
 				usage();
 				exit(EX_USAGE);
@@ -307,8 +348,13 @@ readchar(int i, glyph_t *glyph, font_t *font)
 			if (ch < 0x20)
 				ch = ' ';
 #endif /* DEBUG */
-			ibmtoutf8((char *)&ch,
-				  glyph->cell[row * width + col].utfchar);
+			if (opt.encoding == ENC_UNICODE) {
+				ibmtoutf8((char *)&ch,
+					  glyph->cell[row * width + col].utfchar);
+			} else {
+				glyph->cell[row * width + col].utfchar[0] = ch;
+			}
+
 			glyph->cell[row * width + col].color = color;
 
 			col++;
@@ -350,9 +396,15 @@ printcolor(uint8_t color)
 	uint8_t fg = color & 0x0f;
 	uint8_t bg = (color & 0xf0) >> 4;
 
-	printf("\x1b[");
-	printf("%d;", fgcolors[fg]);
-	printf("%dm", bgcolors[bg]);
+	if (opt.color == COLOR_ANSI) {
+		printf("\x1b[");
+		printf("%d;", fgacolors[fg]);
+		printf("%dm", bgacolors[bg]);
+	} else {
+		printf("\x03");
+		printf("%d,", fgmcolors[fg]);
+		printf("%d", bgmcolors[bg]);
+	}
 }
 
 void
@@ -361,6 +413,7 @@ printrow(const glyph_t *glyph, int row)
 	char *utfchar;
 	uint8_t color;
 	int i;
+
 	for (i = 0; i < glyph->width; i++) {
 		utfchar = glyph->cell[glyph->width * row + i].utfchar;			
 		color = glyph->cell[glyph->width * row + i].color;
@@ -368,7 +421,12 @@ printrow(const glyph_t *glyph, int row)
 
 		printf("%s", utfchar);
 	}
-	printf("\x1b[0m");
+
+	if (opt.color == COLOR_ANSI) {
+		printf("\x1b[0m");
+	} else {
+		printf("\x03");
+	}
 }
 
 void
@@ -408,8 +466,17 @@ printstr(const char *str, font_t *font)
 		for (int c = 0; c < strlen(str); c++) {
 			glyph_t *g = font->glyphs[lookupchar(str[c], font)];
 			printrow(g, i);
-			printf("\x1b[0m");
+
+			if (opt.color == COLOR_ANSI) {
+				printf("\x1b[0m");
+			} else {
+				printf("\x03");
+			}
 		}
-		printf("\x1b[0m\n");
+		if (opt.color == COLOR_ANSI) {
+			printf("\x1b[0m\n");
+		} else {
+			printf("\r\n");
+		}
 	}
 }
