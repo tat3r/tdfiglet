@@ -45,6 +45,7 @@ typedef struct opt_s {
 	uint8_t width;
 	uint8_t color;
 	uint8_t encoding;
+	bool info;
 } opt_t;
 
 typedef struct cell_s {
@@ -102,6 +103,7 @@ usage(void)
 	fprintf(stderr, "    -w n      set screen width.  Default is 80.\n");
 	fprintf(stderr, "    -c a|m    color format ANSI or mirc.  Default is ANSI\n");
 	fprintf(stderr, "    -e u|a    encode as unicode or ASCII.  Default is unicode\n");
+	fprintf(stderr, "    -i        print font details.\n");
 	fprintf(stderr, "\n");
 	exit(EX_USAGE);
 
@@ -120,8 +122,10 @@ main(int argc, char *argv[])
 
 	opt.justify = LEFT_JUSTIFY;
 	opt.width = 80;
+	opt.info = false;
+	opt.encoding = ENC_UNICODE;
 
-	while((o = getopt(argc, argv, "w:j:c:e:")) != -1) {
+	while((o = getopt(argc, argv, "w:j:c:e:i")) != -1) {
 		switch (o) {
 			case 'w':
 				opt.width = atoi(optarg);
@@ -168,7 +172,9 @@ main(int argc, char *argv[])
 						exit(EX_USAGE);
 				}
 				break;
-
+			case 'i':
+				opt.info = true;
+				break;
 			default:
 				usage();
 				exit(EX_USAGE);
@@ -207,9 +213,9 @@ font_t
 
 	fd = open(fn, O_RDONLY);
 
-#ifdef DEBUG
-	printf("file: %s\n", fn);
-#endif /* DEBUG */
+	if (opt.info) {
+		printf("file: %s\n", fn);
+	}
 
 	font = malloc(sizeof(font_t));
 
@@ -245,24 +251,26 @@ font_t
 		exit(EX_NOINPUT);
 	}
 
-#ifdef DEBUG
-	printf("font: %s\nchar list: ", font->name);
-#endif /* DEBUG */
+	if (opt.info) {
+		printf("font: %s\nchar list: ", font->name);
+	}
 
 	for (int i = 0; i < NUM_CHARS; i++)
 		if (lookupchar(charlist[i], font) > -1) {
-#ifdef DEBUG
-			printf("%c", charlist[i]);
-#endif /* DEBUG */
+
+			if (opt.info) {
+				printf("%c", charlist[i]);
+			}
+
 			p = font->data + font->charlist[i] + 2;
 			if (*p > font->height) {
 				font->height = *p;
 			}
 		}
 
-#ifdef DEBUG
-	printf("\n");
-#endif /* DEBUG */
+	if (opt.info) {
+		printf("\n");
+	}
 
 	for (int i = 0; i < NUM_CHARS; i++) {
 
