@@ -425,10 +425,7 @@ printrow(const glyph_t *glyph, int row)
 		utfchar = glyph->cell[glyph->width * row + i].utfchar;			
 		color = glyph->cell[glyph->width * row + i].color;
 
-		if (i == 0) {
-			printcolor(color);
-			lastcolor = color;
-		} else if (color != lastcolor) {
+		if (i == 0 || color != lastcolor) {
 			printcolor(color);
 			lastcolor = color;
 		}
