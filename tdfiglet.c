@@ -224,11 +224,19 @@ font_t
 		exit(EX_NOINPUT);
 	}
 
-	stat(fn, &st);
+	if (stat(fn, &st)) {
+		perror(NULL);
+		exit(EX_OSERR);
+	}
 
 	len = st.st_size;
 
 	map = mmap(0, len, PROT_READ, MAP_PRIVATE, fd, 0);
+
+	if (!map) {
+		perror(NULL);
+		exit(EX_OSERR);
+	}
 
 	close(fd);
 
@@ -341,7 +349,6 @@ readchar(int i, glyph_t *glyph, font_t *font)
 			ch = ' ';
 			row++;
 			col = 0;
-			color = 0;
 		} else {
 			color = *p;
 			p++;

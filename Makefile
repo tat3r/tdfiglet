@@ -1,12 +1,11 @@
 PROG := tdfiglet
 SRC := tdfiglet.c
-CC := cc
+CC ?= cc
 CFLAGS += -std=c99 -Wall
 
 UNAME := $(shell sh -c 'uname -s 2>/dev/null')
 
 ifeq ($(UNAME),Darwin)
-	CC := clang
 	CFLAGS += -Wunused-result -Wunused-value
 	LDFLAGS += -liconv
 endif
