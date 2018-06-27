@@ -59,7 +59,7 @@ typedef struct glyph_s {
 	cell_t *cell;
 } glyph_t;
 
-typedef struct __attribute__((packed)) font_s {
+typedef struct font_s {
 	uint8_t namelen;
 	uint8_t *name;
 	uint8_t fonttype;
@@ -71,16 +71,8 @@ typedef struct __attribute__((packed)) font_s {
 	uint8_t height;
 } font_t;
 
-char *magic = "\x13TheDraw FONTS file\x1a";
-
-char *charlist = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNO"
-		 "PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-/* thedraw colors                                     DRK BRT BRT BRT RED         BRT */
-/* thedraw colors     BLK BLU GRN CYN RED MAG BRN GRY GRY BLU GRN CYN RED PNK YLW WHT */
-uint8_t fgacolors[] = {30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97};
-uint8_t bgacolors[] = {40, 44, 42, 46, 41, 45, 43, 47};
-uint8_t fgmcolors[] = { 1,  2,  3, 10,  5,  6,  7, 15, 14,  12, 9, 11,  4, 13,  8,  0};
-uint8_t bgmcolors[] = { 1,  2,  3, 10,  5,  6,  7, 15, 14,  12, 9, 11,  4, 13,  8,  0};
+const char *charlist = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNO"
+		       "PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
 void usage(void);
 font_t *loadfont(char *fn);
@@ -211,6 +203,8 @@ font_t
 	size_t len;
 	uint8_t *p;
 
+	const char *magic = "\x13TheDraw FONTS file\x1a";
+
 	fd = open(fn, O_RDONLY);
 
 	if (opt.info) {
@@ -263,7 +257,13 @@ font_t
 		printf("font: %s\nchar list: ", font->name);
 	}
 
-	for (int i = 0; i < NUM_CHARS; i++)
+	for (int i = 0; i < NUM_CHARS; i++) {
+		/* check for invalid glyph addresses */
+		if (charlist[i] + &map[233] > map + st.st_size) {
+			perror(NULL);
+			exit(EX_NOINPUT);
+		}
+
 		if (lookupchar(charlist[i], font) > -1) {
 
 			if (opt.info) {
@@ -275,6 +275,7 @@ font_t
 				font->height = *p;
 			}
 		}
+	}
 
 	if (opt.info) {
 		printf("\n");
@@ -406,8 +407,16 @@ ibmtoutf8(char *a, char *u)
 void
 printcolor(uint8_t color)
 {
+
 	uint8_t fg = color & 0x0f;
 	uint8_t bg = (color & 0xf0) >> 4;
+
+	/* thedraw colors                                     DRK BRT BRT BRT RED         BRT */
+	/* thedraw colors     BLK BLU GRN CYN RED MAG BRN GRY GRY BLU GRN CYN RED PNK YLW WHT */
+	uint8_t fgacolors[] = {30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97};
+	uint8_t bgacolors[] = {40, 44, 42, 46, 41, 45, 43, 47};
+	uint8_t fgmcolors[] = { 1,  2,  3, 10,  5,  6,  7, 15, 14,  12, 9, 11,  4, 13,  8,  0};
+	uint8_t bgmcolors[] = { 1,  2,  3, 10,  5,  6,  7, 15, 14,  12, 9, 11,  4, 13,  8,  0};
 
 	if (opt.color == COLOR_ANSI) {
 		printf("\x1b[");
