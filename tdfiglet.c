@@ -40,6 +40,14 @@
 #define ENC_UNICODE	0
 #define ENC_ANSI	1
 
+#ifndef FONT_DIR
+#define FONT_DIR	"fonts"
+#endif /* FONT_DIR */
+
+#ifndef FONT_EXT
+#define FONT_EXT	"tdf"
+#endif /* FONT_EXT */
+
 typedef struct opt_s {
 	uint8_t justify;
 	uint8_t width;
@@ -198,7 +206,7 @@ main(int argc, char *argv[])
 }
 
 font_t
-*loadfont(char *fn) {
+*loadfont(char *fn_arg) {
 
 	font_t *font;
 	uint8_t *map = NULL;
@@ -206,8 +214,19 @@ font_t
 	struct stat st;
 	size_t len;
 	uint8_t *p;
+	char *fn = strdup("");
 
 	const char *magic = "\x13TheDraw FONTS file\x1a";
+
+	if (!strchr(fn_arg, '/')) {
+		if (strchr(fn_arg, '.')) {
+			sprintf(fn, "%s/%s", FONT_DIR, fn_arg);
+		} else {
+			sprintf(fn, "%s/%s.%s", FONT_DIR, fn_arg, FONT_EXT);
+		}
+	} else {
+		strcpy(fn, fn_arg);
+	}
 
 	fd = open(fn, O_RDONLY);
 
@@ -303,6 +322,7 @@ font_t
 		}
 	}
 
+	free(fn);
 	return font;
 }
 
