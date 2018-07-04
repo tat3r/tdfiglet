@@ -491,7 +491,13 @@ printstr(const char *str, font_t *font)
 		}
 
 		for (int c = 0; c < strlen(str); c++) {
-			glyph_t *g = font->glyphs[lookupchar(str[c], font)];
+			int id = lookupchar(str[c], font);
+
+			if (id == -1) {
+				continue;
+			}
+
+			glyph_t *g = font->glyphs[id];
 			printrow(g, i);
 
 			if (opt.color == COLOR_ANSI) {
