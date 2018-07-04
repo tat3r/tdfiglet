@@ -117,6 +117,10 @@ main(int argc, char *argv[])
 	opt.info = false;
 	opt.encoding = ENC_UNICODE;
 
+	if (argc == 1) {
+		usage();
+	}
+
 	while((o = getopt(argc, argv, "w:j:c:e:i")) != -1) {
 		switch (o) {
 			case 'w':
