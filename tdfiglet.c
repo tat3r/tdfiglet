@@ -104,12 +104,10 @@ usage(void)
 	fprintf(stderr, "    -c a|m    color format ANSI or mirc.  Default is ANSI\n");
 	fprintf(stderr, "    -e u|a    encode as unicode or ASCII.  Default is unicode\n");
 	fprintf(stderr, "    -i        print font details.\n");
+	fprintf(stderr, "    -h        usage.\n");
+
 	fprintf(stderr, "\n");
 	exit(EX_USAGE);
-
-	printf("welp\n");
-
-	return;
 }
 
 opt_t opt;
@@ -124,6 +122,10 @@ main(int argc, char *argv[])
 	opt.width = 80;
 	opt.info = false;
 	opt.encoding = ENC_UNICODE;
+
+	if (argc < 2) {
+		usage();
+	}
 
 	while((o = getopt(argc, argv, "w:j:c:e:i")) != -1) {
 		switch (o) {
@@ -143,7 +145,6 @@ main(int argc, char *argv[])
 						break;
 					default:
 						usage();
-						exit(EX_USAGE);
 				}
 				break;
 			case 'c':
@@ -156,7 +157,6 @@ main(int argc, char *argv[])
 						break;
 					default:
 						usage();
-						exit(EX_USAGE);
 				}
 				break;
 			case 'e':
@@ -169,15 +169,15 @@ main(int argc, char *argv[])
 						break;
 					default:
 						usage();
-						exit(EX_USAGE);
 				}
 				break;
 			case 'i':
 				opt.info = true;
 				break;
+			case 'h':
+				/* fallthrough */
 			default:
 				usage();
-				exit(EX_USAGE);
 		}
 	}
 
