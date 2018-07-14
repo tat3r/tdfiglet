@@ -40,6 +40,14 @@
 #define ENC_UNICODE	0
 #define ENC_ANSI	1
 
+#ifndef FONT_DIR
+#define FONT_DIR	"fonts"
+#endif /* FONT_DIR */
+
+#ifndef FONT_EXT
+#define FONT_EXT	"tdf"
+#endif /* FONT_EXT */
+
 typedef struct opt_s {
 	uint8_t justify;
 	uint8_t width;
@@ -194,7 +202,7 @@ main(int argc, char *argv[])
 }
 
 font_t
-*loadfont(char *fn) {
+*loadfont(char *fn_arg) {
 
 	font_t *font;
 	uint8_t *map = NULL;
@@ -202,10 +210,35 @@ font_t
 	struct stat st;
 	size_t len;
 	uint8_t *p;
+	char *fn = NULL;
 
 	const char *magic = "\x13TheDraw FONTS file\x1a";
 
+	if (!strchr(fn_arg, '/')) {
+		if (strchr(fn_arg, '.')) {
+			fn = malloc(strlen(FONT_DIR) + strlen(fn_arg) + 1);
+			sprintf(fn, "%s/%s", FONT_DIR, fn_arg);
+		} else {
+			fn = malloc(strlen(FONT_DIR) + strlen(fn_arg) + \
+				strlen(FONT_EXT) + 1);
+			sprintf(fn, "%s/%s.%s", FONT_DIR, fn_arg, FONT_EXT);
+		}
+	} else {
+		fn = malloc(strlen(fn_arg) + 1);
+		sprintf(fn, "%s", fn_arg);
+	}
+
+	if (fn == NULL) {
+		perror(NULL);
+		exit(EX_OSERR);
+	}
+
 	fd = open(fn, O_RDONLY);
+
+	if (fd < 0) {
+		perror(NULL);
+		exit(EX_NOINPUT);
+	}
 
 	if (opt.info) {
 		printf("file: %s\n", fn);
@@ -213,15 +246,12 @@ font_t
 
 	font = malloc(sizeof(font_t));
 
-	if (fd < 0) {
-		perror(NULL);
-		exit(EX_NOINPUT);
-	}
-
 	if (stat(fn, &st)) {
 		perror(NULL);
 		exit(EX_OSERR);
 	}
+
+	free(fn);
 
 	len = st.st_size;
 
