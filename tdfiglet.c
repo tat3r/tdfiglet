@@ -48,6 +48,10 @@
 #define FONT_EXT	"tdf"
 #endif /* FONT_EXT */
 
+#ifndef DEFAULT_FONT
+#define DEFAULT_FONT	"brndamgx" /* seems most complete */
+#endif /* DEFAULT_FONT */
+
 typedef struct opt_s {
 	uint8_t justify;
 	uint8_t width;
@@ -97,14 +101,15 @@ void printstr(const char *str, font_t *font);
 void
 usage(void)
 {
-	fprintf(stderr, "usage: tdfiglet [options] [font.tdf] input\n");
+	fprintf(stderr, "usage: tdfiglet [options] -f [font] input\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "    -j l|r|c  Justify left, right, or center.  Default is left\n");
-	fprintf(stderr, "    -w n      set screen width.  Default is 80.\n");
-	fprintf(stderr, "    -c a|m    color format ANSI or mirc.  Default is ANSI\n");
-	fprintf(stderr, "    -e u|a    encode as unicode or ASCII.  Default is unicode\n");
-	fprintf(stderr, "    -i        print font details.\n");
-	fprintf(stderr, "    -h        usage.\n");
+	fprintf(stderr, "    -f [font] Specify font file used.\n");
+	fprintf(stderr, "    -j l|r|c  Justify left, right, or center.  Default is left.\n");
+	fprintf(stderr, "    -w n      Set screen width.  Default is 80.\n");
+	fprintf(stderr, "    -c a|m    Color format ANSI or mirc.  Default is ANSI.\n");
+	fprintf(stderr, "    -e u|a    Encode as unicode or ASCII.  Default is unicode.\n");
+	fprintf(stderr, "    -i        Print font details.\n");
+	fprintf(stderr, "    -h        Print usage.\n");
 
 	fprintf(stderr, "\n");
 	exit(EX_USAGE);
@@ -122,13 +127,17 @@ main(int argc, char *argv[])
 	opt.width = 80;
 	opt.info = false;
 	opt.encoding = ENC_UNICODE;
+	char *fontfile = NULL;
 
 	if (argc < 2) {
 		usage();
 	}
 
-	while((o = getopt(argc, argv, "w:j:c:e:i")) != -1) {
+	while((o = getopt(argc, argv, "f:w:j:c:e:i")) != -1) {
 		switch (o) {
+			case 'f':
+				fontfile = optarg;
+				break;
 			case 'w':
 				opt.width = atoi(optarg);
 				break;
@@ -184,7 +193,11 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	font = loadfont(argv[0]);
+	if (!fontfile) {
+		fontfile = DEFAULT_FONT;
+	}
+
+	font = loadfont(fontfile);
 
 	/* TODO: add support for the others */
 	if (font->fonttype != COLOR_FNT) {
@@ -193,7 +206,7 @@ main(int argc, char *argv[])
 
 	printf("\n");
 
-	for (int i = 1; i < argc; i++) {
+	for (int i = 0; i < argc; i++) {
 		printstr(argv[i], font);
 		printf("\n");
 	}
