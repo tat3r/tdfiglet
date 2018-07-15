@@ -5,6 +5,7 @@ Because your figlet ascii sucks.
 
 ![screenshot](https://git.trollforge.org/tdfiglet/plain/screenshot.png)
 
+All known TDF fonts (1198) are included.
 ## Installation
 
 ```
