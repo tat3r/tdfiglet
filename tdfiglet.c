@@ -143,10 +143,6 @@ main(int argc, char *argv[])
 	opt.encoding = ENC_UNICODE;
 	char *fontfile = NULL;
 
-	if (argc < 2) {
-		usage();
-	}
-
 	while((o = getopt(argc, argv, "f:w:j:c:e:i")) != -1) {
 		switch (o) {
 			case 'f':
@@ -207,6 +203,10 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
+	if (argc < 1) {
+		usage();
+	}
+
 	if (!fontfile) {
 		fontfile = DEFAULT_FONT;
 	}
@@ -247,7 +247,7 @@ font_t
 			sprintf(fn, "%s/%s", FONT_DIR, fn_arg);
 		} else {
 			fn = malloc(strlen(FONT_DIR) + strlen(fn_arg) + \
-				strlen(FONT_EXT) + 1);
+				strlen(FONT_EXT) + 2);
 			sprintf(fn, "%s/%s.%s", FONT_DIR, fn_arg, FONT_EXT);
 		}
 	} else {
@@ -273,7 +273,7 @@ font_t
 
 	font = malloc(sizeof(font_t));
 
-	if (stat(fn, &st)) {
+	if (fstat(fd, &st)) {
 		perror(NULL);
 		exit(EX_OSERR);
 	}
@@ -468,8 +468,8 @@ printcolor(uint8_t color)
 	uint8_t fg = color & 0x0f;
 	uint8_t bg = (color & 0xf0) >> 4;
 
-	/* thedraw colors                                     DRK BRT BRT BRT RED         BRT */
-	/* thedraw colors     BLK BLU GRN CYN RED MAG BRN GRY GRY BLU GRN CYN RED PNK YLW WHT */
+	/* thedraw colors                                     BRT BRT BRT BRT BRT BRT BRT BRT */
+	/* thedraw colors     BLK BLU GRN CYN RED MAG BRN GRY BLK BLU GRN CYN RED PNK YLW WHT */
 	uint8_t fgacolors[] = {30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97};
 	uint8_t bgacolors[] = {40, 44, 42, 46, 41, 45, 43, 47};
 	uint8_t fgmcolors[] = { 1,  2,  3, 10,  5,  6,  7, 15, 14,  12, 9, 11,  4, 13,  8,  0};
@@ -495,7 +495,7 @@ printrow(const glyph_t *glyph, int row)
 	uint8_t lastcolor;
 
 	for (i = 0; i < glyph->width; i++) {
-		utfchar = glyph->cell[glyph->width * row + i].utfchar;			
+		utfchar = glyph->cell[glyph->width * row + i].utfchar;
 		color = glyph->cell[glyph->width * row + i].color;
 
 		if (i == 0 || color != lastcolor) {

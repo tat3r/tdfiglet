@@ -4,7 +4,7 @@ PREFIX ?= /usr/local
 FONTS := fonts/*
 FONTDIR := $(PREFIX)/share/$(PROG)/fonts
 CC ?= cc
-CFLAGS += -DFONT_DIR=\"$(FONTDIR)\" -std=c99 -Wall
+CFLAGS += -DFONT_DIR=\"$(FONTDIR)\" -std=c99 -Wall -g
 
 UNAME := $(shell sh -c 'uname -s 2>/dev/null')
 
@@ -19,10 +19,10 @@ default: $(SRC)
 .PHONY: debug clean install
 
 install:
-	install -m 0755 -d $(PREFIX)/bin
-	install -m 0755 -d $(FONTDIR)
-	install -m 0755 $(PROG) $(PREFIX)/bin/$(PROG)
-	for i in $(FONTS) ; do install -m 0644 $$i $(FONTDIR) ; done
+	test -d $(FONTDIR) || mkdir -p $(PREFIX)/bin
+	cp $(PROG) $(PREFIX)/bin
+	test -d $(FONTDIR) || mkdir -p $(FONTDIR)
+	for i in $(FONTS) ; do cp -v $$i $(FONTDIR) ; done
 
 debug: $(SRC)
 	$(CC) -DDEBUG -g $(CFLAGS) $(LDFLAGS) $(SRC) -o $(PROG)
