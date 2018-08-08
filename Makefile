@@ -19,7 +19,7 @@ default: $(SRC)
 .PHONY: debug clean install
 
 install:
-	test -d $(FONTDIR) || mkdir -p $(PREFIX)/bin
+	test -d $(PREFIX)/bin || mkdir -p $(PREFIX)/bin
 	cp $(PROG) $(PREFIX)/bin
 	test -d $(FONTDIR) || mkdir -p $(FONTDIR)
 	for i in $(FONTS) ; do cp -v $$i $(FONTDIR) ; done
