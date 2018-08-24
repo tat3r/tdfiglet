@@ -26,5 +26,6 @@ usage: tdfiglet [options] -f [font] input
     -c a|m    Color format ANSI or mirc.  Default is ANSI.
     -e u|a    Encode as unicode or ASCII.  Default is unicode.
     -i        Print font details.
+    -r        Use random font.
     -h        Print usage.
 ```
