@@ -21,7 +21,7 @@ default: $(SRC)
 .PHONY: debug clean install
 
 install:
-	test -d $(FONTDIR) || mkdir -p $(PREFIX)/bin
+	test -d $(PREFIX)/bin || mkdir -p $(PREFIX)/bin
 	cp $(PROG) $(PREFIX)/bin
 	test -d $(FONTDIR) || mkdir -p $(FONTDIR)
 	rm -f $(FONTDIR)/*.tdf
