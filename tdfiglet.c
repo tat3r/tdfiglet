@@ -13,6 +13,7 @@
  */
 
 #include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -23,9 +24,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <sys/mman.h>
+#include <sys/queue.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -71,6 +74,7 @@ typedef struct opt_s {
 	uint8_t width;
 	uint8_t color;
 	uint8_t encoding;
+	bool random;
 	bool info;
 } opt_t;
 
@@ -97,8 +101,15 @@ typedef struct font_s {
 	uint8_t height;
 } font_t;
 
+struct dirname_s {
+	char *str;
+	SLIST_ENTRY(dirname_s) stuff;
+};
+
 const char *charlist = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNO"
 		       "PQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+opt_t opt;
 
 void usage(void);
 font_t *loadfont(char *fn);
@@ -115,7 +126,7 @@ void printstr(const char *str, font_t *font);
 void
 usage(void)
 {
-	fprintf(stderr, "usage: tdfiglet [options] -f [font] input\n");
+	fprintf(stderr, "usage: tdfiglet [options] input\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "    -f [font] Specify font file used.\n");
 	fprintf(stderr, "    -j l|r|c  Justify left, right, or center.  Default is left.\n");
@@ -123,13 +134,11 @@ usage(void)
 	fprintf(stderr, "    -c a|m    Color format ANSI or mirc.  Default is ANSI.\n");
 	fprintf(stderr, "    -e u|a    Encode as unicode or ASCII.  Default is unicode.\n");
 	fprintf(stderr, "    -i        Print font details.\n");
+	fprintf(stderr, "    -r        Use random font.\n");
 	fprintf(stderr, "    -h        Print usage.\n");
-
 	fprintf(stderr, "\n");
 	exit(EX_USAGE);
 }
-
-opt_t opt;
 
 int
 main(int argc, char *argv[])
@@ -141,9 +150,19 @@ main(int argc, char *argv[])
 	opt.width = 80;
 	opt.info = false;
 	opt.encoding = ENC_UNICODE;
+	opt.random = false;
 	char *fontfile = NULL;
 
-	while((o = getopt(argc, argv, "f:w:j:c:e:i")) != -1) {
+	DIR *d;
+	struct dirent *dir;
+	SLIST_HEAD(, dirname_s) head = SLIST_HEAD_INITIALIZER(dirname_s);
+	SLIST_INIT(&head);
+	struct dirname_s *dp;
+
+	int r = 0;
+	int dll = 0;
+
+	while((o = getopt(argc, argv, "f:w:j:c:e:ir")) != -1) {
 		switch (o) {
 			case 'f':
 				fontfile = optarg;
@@ -193,6 +212,9 @@ main(int argc, char *argv[])
 			case 'i':
 				opt.info = true;
 				break;
+			case 'r':
+				opt.random = true;
+				break;
 			case 'h':
 				/* fallthrough */
 			default:
@@ -208,15 +230,44 @@ main(int argc, char *argv[])
 	}
 
 	if (!fontfile) {
-		fontfile = DEFAULT_FONT;
+		if (!opt.random) {
+			fontfile = DEFAULT_FONT;
+		} else {
+			d = opendir(FONT_DIR);
+			if (!d) {
+				fprintf(stderr, "Error: unable to read %s\n",
+					FONT_DIR);
+				exit(1);
+			}
+
+			while ((dir = readdir(d))) {
+				if (strstr(dir->d_name, FONT_EXT)) {
+					dp = malloc(sizeof(struct dirname_s));
+					dp->str = calloc(1, 1024);
+					strcpy(dp->str, dir->d_name);
+					SLIST_INSERT_HEAD(&head, dp, stuff);
+					dll++;
+				}
+			}
+			closedir(d);
+
+			srand(time(NULL));
+			r = dll ? rand() % dll : 0;
+
+			dp = SLIST_FIRST(&head);
+			for (int i = 0; i < r; i++) {
+				dp = SLIST_NEXT(dp, stuff);
+			}
+
+			if (dp && dp->str) {
+				fontfile = dp->str;
+			} else {
+				fontfile = DEFAULT_FONT;
+			}
+		}
 	}
 
 	font = loadfont(fontfile);
-
-	/* TODO: add support for the others */
-	if (font->fonttype != COLOR_FNT) {
-		return 0;
-	}
 
 	printf("\n");
 
@@ -229,7 +280,8 @@ main(int argc, char *argv[])
 }
 
 font_t
-*loadfont(char *fn_arg) {
+*loadfont(char *fn_arg)
+{
 
 	font_t *font;
 	uint8_t *map = NULL;
@@ -243,11 +295,11 @@ font_t
 
 	if (!strchr(fn_arg, '/')) {
 		if (strchr(fn_arg, '.')) {
-			fn = malloc(strlen(FONT_DIR) + strlen(fn_arg) + 1);
+			fn = malloc(strlen(FONT_DIR) + strlen(fn_arg) + 2);
 			sprintf(fn, "%s/%s", FONT_DIR, fn_arg);
 		} else {
 			fn = malloc(strlen(FONT_DIR) + strlen(fn_arg) + \
-				strlen(FONT_EXT) + 2);
+				strlen(FONT_EXT) + 3);
 			sprintf(fn, "%s/%s.%s", FONT_DIR, fn_arg, FONT_EXT);
 		}
 	} else {
@@ -278,8 +330,6 @@ font_t
 		exit(EX_OSERR);
 	}
 
-	free(fn);
-
 	len = st.st_size;
 
 	map = mmap(0, len, PROT_READ, MAP_PRIVATE, fd, 0);
@@ -305,10 +355,12 @@ font_t
 	font->data = &map[233];
 	font->height = 0;
 
-	if (strncmp(magic, (const char *)map, strlen(magic))) {
-		perror("Invalid font file");
+	if (strncmp(magic, (const char *)map, strlen(magic)) || font->fonttype != COLOR_FNT) {
+		fprintf(stderr, "Invalid font file: %s\n", fn);
 		exit(EX_NOINPUT);
 	}
+
+	free(fn);
 
 	if (opt.info) {
 		printf("font: %s\nchar list: ", font->name);
@@ -340,7 +392,7 @@ font_t
 
 	for (int i = 0; i < NUM_CHARS; i++) {
 
-		if (lookupchar(charlist[i], font) > -1) {
+		if (lookupchar(charlist[i], font) != -1) {
 
 			font->glyphs[i] = calloc(1, sizeof(glyph_t));
 
@@ -437,7 +489,7 @@ int
 lookupchar(char c, const font_t *font)
 {
 	for (int i = 0; i < NUM_CHARS; i++) {
-		if (c == charlist[i] && font->charlist[i] != 0xffff)
+		if (charlist[i] == c && font->charlist[i] != 0xffff)
 			return i;
 	}
 
@@ -520,11 +572,18 @@ printstr(const char *str, font_t *font)
 	int linewidth = 0;
 	int len = strlen(str);
 	int padding = 0;
+	int n = 0;
 
 	for (int i = 0; i < len; i++) {
 		glyph_t *g;
 
-		 g = font->glyphs[lookupchar(str[i], font)];
+		n = lookupchar(str[i], font);
+
+		if (n == -1) {
+			continue;
+		}
+
+		g = font->glyphs[n];
 
 		if (g->height > maxheight) {
 			maxheight = g->height;
@@ -548,7 +607,13 @@ printstr(const char *str, font_t *font)
 		}
 
 		for (int c = 0; c < strlen(str); c++) {
-			glyph_t *g = font->glyphs[lookupchar(str[c], font)];
+			n = lookupchar(str[c], font);
+
+			if (n == -1) {
+				continue;
+			}
+
+			glyph_t *g = font->glyphs[n];
 			printrow(g, i);
 
 			if (opt.color == COLOR_ANSI) {
