@@ -24,12 +24,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
-#include <time.h>
 #include <unistd.h>
 
 #include <sys/mman.h>
 #include <sys/queue.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 
 #ifdef DEBUG
@@ -153,6 +153,8 @@ main(int argc, char *argv[])
 	opt.random = false;
 	char *fontfile = NULL;
 
+	struct timeval tv;
+
 	DIR *d;
 	struct dirent *dir;
 	SLIST_HEAD(, dirname_s) head = SLIST_HEAD_INITIALIZER(dirname_s);
@@ -251,7 +253,9 @@ main(int argc, char *argv[])
 			}
 			closedir(d);
 
-			srand(time(NULL));
+			gettimeofday(&tv, NULL);
+
+			srand(tv.tv_usec);
 			r = dll ? rand() % dll : 0;
 
 			dp = SLIST_FIRST(&head);
