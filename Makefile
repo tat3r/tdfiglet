@@ -35,4 +35,4 @@ clean:
 	rm -rf $(PROG) $(PROG).dSYM
 
 test: $(PROG)
-	for i in fonts/*.tdf; do echo $$i; ./tdfiglet -f $$i -jc Test; done | less -R
+	for i in fonts/*.tdf; do ./tdfiglet -i -f $$i -jc Test; done | less -R
