@@ -18,7 +18,7 @@ endif
 default: $(SRC)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(SRC) -o $(PROG)
 
-.PHONY: debug clean install
+.PHONY: debug clean install test
 
 install:
 	test -d $(PREFIX)/bin || mkdir -p $(PREFIX)/bin
@@ -34,3 +34,5 @@ debug: $(SRC)
 clean:
 	rm -rf $(PROG) $(PROG).dSYM
 
+test: $(PROG)
+	for i in fonts/*.tdf; do echo $$i; ./tdfiglet -f $$i -jc Test; done | less -R
